@@ -18,6 +18,8 @@ int minY = 10000;
 int graphDensity = 500;
 ArrayList xData;
 ArrayList yData;
+ArrayList averageXData;
+ArrayList averageYData;
 PFont f;
 
 int graphX = 0;
@@ -34,6 +36,7 @@ int graph2Y = 600;
 int graph2Height = 300;
 int graph2Width = 300;
 
+//Analysis Data
 float averageX = 0.0;
 float averageY = 0.0;
 
@@ -59,12 +62,16 @@ void setup() {
   
   xData = new ArrayList();
   yData = new ArrayList();
+  averageXData = new ArrayList();
+  averageYData = new ArrayList();
   
   //fill arrayList with '5000's which is unity for the accellerometer
   for(int counter=0;counter < graphDensity; counter++)
   {
     xData.add(5000.0);
     yData.add(5000.0);
+    averageXData.add(5000.0);
+    averageYData.add(5000.0);
   }
   
   f = loadFont("Verdana-14.vlw");
@@ -74,7 +81,7 @@ void setup() {
   // Print a list of the serial ports, for debugging purposes:
   println(Serial.list());
   
-  String portName = Serial.list()[2];
+  String portName = Serial.list()[3];
   myPort = new Serial(this, portName, 9600);
 }
 
@@ -120,7 +127,7 @@ void draw() {
   curveVertex(graphX+graphHeight, graphY - ((Float)yData.get(yData.size()-1) / dataMax) * graphHeight);
   endShape();
   
-  
+  //DRAW AVERAGE LINES
   stroke(255,50);
   line(graphX, graphY - (averageX/dataMax)*graphHeight,graphX+graphWidth,graphY - (averageX/dataMax)*graphHeight);
   
@@ -149,8 +156,8 @@ void draw() {
 
 void tick(){
   //for average
-  int averageDistance = 25;
-  float averageDropoff = 1.0;
+  int averageDistance = 40; //how many datapoints to use to calulate the current average
+  float averageDropoff = 0.9; //what is the dropoff for distance to current for average calculations
   float averageSum = 0;
 
   //for frequency
@@ -163,7 +170,7 @@ void tick(){
   //data window to look at
   int windowSize = 200;
 
-  if(firstContact == true)
+  if(firstContact == true) //has first contact occured
   {
     //Calculate and draw x axis average
     for(int i=0;i<averageDistance;i++)
@@ -172,6 +179,8 @@ void tick(){
     }
     
     averageX = averageSum / (float)averageDistance;
+    averageXData.remove(0);
+    averageXData.add(averageX);
     
     //Calculate and draw y axis average
     averageSum = 0;
@@ -182,10 +191,12 @@ void tick(){
     }
     
     averageY = averageSum / (float)averageDistance;
+    averageYData.remove(0);
+    averageYData.add(averageX);
     
-
+/*
     //Calculate the current frequency X
-    float lastDataX = xData.get(xData.size()-1);
+    float lastDataX = (Float)xData.get(xData.size()-1);
     int lastRealChangePoint = 1;
     int lastRealChangeState = 0;
     int changePoint = 0;
@@ -193,7 +204,7 @@ void tick(){
 
     for(int i = 1;i<windowSize;i++)
     {
-      float diff = (Float)xData.get(xData.size - 1 - i) - lastXData;
+      float diff = (Float)xData.get(xData.size() - 1 - i) - lastDataX; //the difference between this point and the last
 
       if(diff < 0)
       {
@@ -217,7 +228,7 @@ void tick(){
 
         }
       }
-    }
+    }*/
     /*
      if(abs(lastDataX - (Float)xData.get(xData.size()-1)) > noiseReducer)
     {
