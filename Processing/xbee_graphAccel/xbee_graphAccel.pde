@@ -34,6 +34,25 @@ int graph2Y = 600;
 int graph2Height = 300;
 int graph2Width = 300;
 
+float averageX = 0.0;
+float averageY = 0.0;
+
+int lastSettingX = 0;
+int lastSettingY = 0;
+
+float timeFromSwitchX = 0.0;
+float timeFromSwitchY = 0.0;
+
+float lastPeriodX = 0;
+float lastPeriodY = 0;
+
+float hzX = 0.0;
+float hzY = 0.0;
+
+float lastDataX = 5000;
+float lastDataY = 5000;
+
+float noiseReducer = 100;
 
 void setup() {
   size(600, 600);  // Stage size
@@ -44,8 +63,8 @@ void setup() {
   //fill arrayList with '5000's which is unity for the accellerometer
   for(int counter=0;counter < graphDensity; counter++)
   {
-    xData.add(5000);
-    yData.add(5000);
+    xData.add(5000.0);
+    yData.add(5000.0);
   }
   
   f = loadFont("Verdana-14.vlw");
@@ -61,15 +80,7 @@ void setup() {
 
 
 void draw() {
-  float weightedAverageX = 0.0;
-  float weightedAverageY = 0.0;
-  float sumCombos = 0.0;
-  float sumWeights = 0.0;
-  
-  int weightWidth = 6; //number of spaces to go in each direction 
-  float weightFactor = 0.99;
-  
-  
+  tick();
   background(127);
   
   /***********
@@ -77,7 +88,7 @@ void draw() {
   ***********/
   fill(255);
   text(connectionStatus, 20, 40);
-  text("x: " + _X + "\ny: " + _Y + "\n\nMaxX: " + maxX + "\nMinX: " + minX + "\n\nMaxY: " + maxY + "\nMinY: " + minY, 20, 100);
+  text("x: " + _X + "\ny: " + _Y + "\n\nMaxX: " + maxX + "\nMinX: " + minX + "\n\nMaxY: " + maxY + "\nMinY: " + minY + "\nPeriodX: " + hzX + "\nPeriodY: " + hzY, 20, 100);
   
   /***********
   GRAPH 1
@@ -86,109 +97,183 @@ void draw() {
   stroke(255); //x axis should be white
   noFill(); //don't fill the graph curves
   beginShape();
-  curveVertex(graphX, graphY - ((float)(Integer)xData.get(0) / dataMax) * graphHeight); //first point on the curve (duplicated in for loop)
+  curveVertex(graphX, graphY - ((Float)xData.get(0) / dataMax) * graphHeight); //first point on the curve (duplicated in for loop)
   for(int i=0;i<xData.size();i++)
-  {
-    sumCombos = 0.0;
-    sumWeights = 0.0;
-    
-    for(int k = 1; k <= weightWidth; k++)
-    {
-      if((i-k)>=0)
-      {
-        sumCombos += ((float)(Integer)xData.get(i-k) * pow(weightFactor, k));
-        sumWeights += (pow(weightFactor, k));
-      }
-    }
-    
-    weightedAverageX = sumCombos/sumWeights;
-    
+  { 
     float pX = graphX + ((float)i / graphDensity) * graphWidth;
-    float pY = graphY - (weightedAverageX / dataMax) * graphHeight;
+    float pY = graphY - ((Float)xData.get(i) / dataMax) * graphHeight;
     curveVertex(pX,pY);
   }
-  curveVertex(graphX+graphHeight, graphY - ((float)(Integer)xData.get(xData.size()-1) / dataMax) * graphHeight); //last point on the curve (duplicated in for loop)
+  curveVertex(graphX+graphHeight, graphY - ((Float)xData.get(xData.size()-1) / dataMax) * graphHeight); //last point on the curve (duplicated in for loop)
   endShape();
   
   //DRAW Y AXIS
   stroke(0);
   beginShape();
-  curveVertex(graphX, graphY - ((float)(Integer)yData.get(0) / dataMax) * graphHeight);
+  curveVertex(graphX, graphY - ((Float)yData.get(0) / dataMax) * graphHeight);
   for(int j=0;j<yData.size();j++)
   {
-    //smooth the data for
-    sumCombos = 0.0;
-    sumWeights = 0.0;
-    
-    for(int l = 1; l <= weightWidth; l++)
-    {
-      if((j-l)>=0)
-      {
-        sumCombos += ((float)(Integer)yData.get(j-l) * pow(weightFactor, l));
-        sumWeights += (pow(weightFactor, l));
-      }
-    }
-    
-    weightedAverageY = sumCombos/sumWeights;
-    
     float pX = graphX + ((float)j / graphDensity) * graphWidth;
-    float pY = graphY - (weightedAverageY / dataMax) * graphHeight;
+    float pY = graphY - ((Float)yData.get(j) / dataMax) * graphHeight;
     curveVertex(pX,pY);
   }
-  curveVertex(graphX+graphHeight, graphY - ((float)(Integer)yData.get(yData.size()-1) / dataMax) * graphHeight);
+  curveVertex(graphX+graphHeight, graphY - ((Float)yData.get(yData.size()-1) / dataMax) * graphHeight);
   endShape();
+  
+  
+  stroke(255,50);
+  line(graphX, graphY - (averageX/dataMax)*graphHeight,graphX+graphWidth,graphY - (averageX/dataMax)*graphHeight);
+  
+  stroke(0,50);
+  line(graphX, graphY - (averageY/dataMax)*graphHeight,graphX+graphWidth,graphY - (averageY/dataMax)*graphHeight);
   
   /***********
   GRAPH 2
   ***********/
   stroke(0, 100);
   beginShape();
-  curveVertex(graph2X + ((float)(Integer)xData.get(0) / dataMax) * graph2Height, graph2Y - ((float)(Integer)yData.get(0) / dataMax) * graph2Height);
+
   for(int j=0;j<yData.size();j++)
   {
-    //smooth x axis
-    sumCombos = 0.0;
-    sumWeights = 0.0;
-    
-    for(int k = 1; k <= weightWidth; k++)
-    {
-      if((j-k)>=0)
-      {
-        sumCombos += ((float)(Integer)xData.get(j-k) * pow(weightFactor, k));
-        sumWeights += (pow(weightFactor, k));
-      }
-    }
-    
-    weightedAverageX = sumCombos/sumWeights;
-    
-    //smooth y axis
-    sumCombos = 0.0;
-    sumWeights = 0.0;
-    
-    for(int l = 1; l <= weightWidth; l++)
-    {
-      if((j-l)>=0)
-      {
-        sumCombos += ((float)(Integer)yData.get(j-l) * pow(weightFactor, l));
-        sumWeights += (pow(weightFactor, l));
-      }
-    }
-    
-    weightedAverageY = sumCombos/sumWeights;
- 
-    float pX = graph2X + (weightedAverageX / dataMax) * graph2Width;
-    float pY = graph2Y - (weightedAverageY / dataMax) * graph2Height;
+    float pX = graph2X + ((Float)xData.get(j) / dataMax) * graph2Width;
+    float pY = graph2Y - ((Float)yData.get(j) / dataMax) * graph2Height;
     curveVertex(pX,pY);
   }
-  curveVertex(graph2X + ((float)(Integer)xData.get(xData.size()-1) / dataMax) * graph2Width, graph2Y - ((float)(Integer)yData.get(yData.size()-1) / dataMax) * graph2Height);
+
   endShape();
   
   stroke(0);
-  ellipse((graph2X + ((float)(Integer)xData.get(xData.size()-1) / dataMax) * graph2Width),(graph2Y - ((float)(Integer)yData.get(yData.size()-1) / dataMax) * graph2Height),10,10);
+  ellipse((graph2X + ((Float)xData.get(xData.size()-1) / dataMax) * graph2Width),(graph2Y - ((Float)yData.get(yData.size()-1) / dataMax) * graph2Height),10,10);
   
 }
 
+void tick(){
+  //for average
+  int averageDistance = 25;
+  float averageDropoff = 1.0;
+  float averageSum = 0;
+
+  //for frequency
+  int currentSettingX = 0;
+  int currentSettingY = 0;
+
+  //number of peaks
+  int peakCount = 0;
+
+  //data window to look at
+  int windowSize = 200;
+
+  if(firstContact == true)
+  {
+    //Calculate and draw x axis average
+    for(int i=0;i<averageDistance;i++)
+    {
+      averageSum += (Float)xData.get(xData.size()-1-i);
+    }
+    
+    averageX = averageSum / (float)averageDistance;
+    
+    //Calculate and draw y axis average
+    averageSum = 0;
+    
+    for(int i=0;i<averageDistance;i++)
+    {
+      averageSum += (Float)yData.get(yData.size()-1-i);
+    }
+    
+    averageY = averageSum / (float)averageDistance;
+    
+
+    //Calculate the current frequency X
+    float lastDataX = xData.get(xData.size()-1);
+    int lastRealChangePoint = 1;
+    int lastRealChangeState = 0;
+    int changePoint = 0;
+    int changeState = 0;
+
+    for(int i = 1;i<windowSize;i++)
+    {
+      float diff = (Float)xData.get(xData.size - 1 - i) - lastXData;
+
+      if(diff < 0)
+      {
+        if(lastChangeState > 0)
+        {
+          changePoint = i;
+        }
+        else
+        {
+
+        }
+      }
+      else
+      {
+        if(lastChangeState < 0)
+        {
+
+        }
+        else
+        {
+
+        }
+      }
+    }
+    /*
+     if(abs(lastDataX - (Float)xData.get(xData.size()-1)) > noiseReducer)
+    {
+      if((Float)xData.get(xData.size()-1)-averageX <= 0)
+      {
+        currentSettingX = -1;
+      }
+      else 
+      {
+        currentSettingX = 1;
+      }
+    }
+    
+    if(abs(lastDataY - (Float)yData.get(yData.size()-1)) > noiseReducer)
+    {
+      if((Float)yData.get(yData.size()-1)-averageY <= 0)
+      {
+        currentSettingY = -1;
+      }
+      else 
+      {
+        currentSettingY = 1;
+      }
+    }
+    
+    if(currentSettingX != lastSettingX)
+    {
+      lastPeriodX = millis() - timeFromSwitchX;
+      timeFromSwitchX = millis();
+      lastSettingX = currentSettingY;
+      
+      hzX = 1000 / lastPeriodX;
+    }
+    
+    if(currentSettingY != lastSettingY)
+    {
+      lastPeriodY = millis() - timeFromSwitchY;
+      timeFromSwitchY = millis();
+      lastSettingY = currentSettingY;
+      
+      hzY = 1000 / lastPeriodY;
+    }
+    */
+  }
+}
+
 void serialEvent(Serial myPort) {
+  //data for smoothing
+  float weightedAverageX = 0.0;
+  float weightedAverageY = 0.0;
+  float sumCombos = 0.0;
+  float sumWeights = 0.0;
+  
+  int weightWidth = 10; //number of spaces to go in each direction 
+  float weightFactor = 0.4;
+  
   // read a byte from the serial port:
   int inByte = myPort.read();
   // if this is the first byte received, and it's an A,
@@ -224,12 +309,43 @@ void serialEvent(Serial myPort) {
       _X = int(s_X);
       _Y = int(s_Y);
       
+      //smooth x axis
+      sumCombos = _X;
+      sumWeights = 1.0;
+    
+      for(int k = 1; k <= weightWidth; k++)
+      {
+        if((xData.size()-1-k)>=0)
+        {
+          sumCombos += ((Float)xData.get((xData.size()-1)-k) * pow(weightFactor, k));
+          sumWeights += (pow(weightFactor, k));
+        }
+      }
+      
+      weightedAverageX = (float)sumCombos / (float)sumWeights;
+      
+      //smooth the data for y axis
+      sumCombos = _Y;
+      sumWeights = 1.0;
+      
+      for(int l = 1; l <= weightWidth; l++)
+      {
+        if((yData.size()-1-l)>=0)
+        {
+          sumCombos += ((Float)yData.get((yData.size()-1)-l) * pow(weightFactor, l));
+          sumWeights += (pow(weightFactor, l));
+        }
+      }
+      
+      weightedAverageY = (float)sumCombos / (float)sumWeights;
+      
       //add the new data, remove the old
       //should maintain the size of the list
-      xData.add(_X);
       xData.remove(0);
-      yData.add(_Y);
+      xData.add(weightedAverageX);
       yData.remove(0);
+      yData.add(weightedAverageY);
+      
       
       if(_X > maxX)
       {
