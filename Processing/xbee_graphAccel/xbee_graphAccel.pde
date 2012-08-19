@@ -20,15 +20,16 @@ ArrayList xData;
 ArrayList yData;
 ArrayList averageXData;
 ArrayList averageYData;
+ArrayList timeCodeData;
+ArrayList periodXData;
+ArrayList periodYData;
 PFont f;
 
+//Data for separated axis graph
 int graphX = 0;
 int graphY = 600;
 int graphHeight = 300;
 int graphWidth = 300;
-
-int dataMax = 8000;
-int dataMin = 0;
 
 //Data for x,y combined graph
 int graph2X = 300;
@@ -36,15 +37,23 @@ int graph2Y = 600;
 int graph2Height = 300;
 int graph2Width = 300;
 
+//Data for Period Graph
+int graph3X = 300;
+int graph3Y = 150;
+int graph3Height = 150;
+int graph3Width = 300;
+
+//Period Bounds Data
+int periodMax = 8;
+int periodMin = 0;
+
+//Axis Bounds Data
+int dataMax = 8000;
+int dataMin = 0;
+
 //Analysis Data
 float averageX = 0.0;
 float averageY = 0.0;
-
-int lastSettingX = 0;
-int lastSettingY = 0;
-
-float timeFromSwitchX = 0.0;
-float timeFromSwitchY = 0.0;
 
 float lastPeriodX = 0;
 float lastPeriodY = 0;
@@ -64,14 +73,19 @@ void setup() {
   yData = new ArrayList();
   averageXData = new ArrayList();
   averageYData = new ArrayList();
+  timeCodeData = new ArrayList();
+  periodXData = new ArrayList();
+  periodYData = new ArrayList();
   
-  //fill arrayList with '5000's which is unity for the accellerometer
+  //fill arrayList with '5000's which is unity for the accellerometer 
   for(int counter=0;counter < graphDensity; counter++)
   {
     xData.add(5000.0);
     yData.add(5000.0);
     averageXData.add(5000.0);
     averageYData.add(5000.0);
+    periodXData.add(0.0);
+    periodYData.add(0.0);
   }
   
   f = loadFont("Verdana-14.vlw");
@@ -81,13 +95,17 @@ void setup() {
   // Print a list of the serial ports, for debugging purposes:
   println(Serial.list());
   
-  String portName = Serial.list()[3];
+  String portName = Serial.list()[2];
   myPort = new Serial(this, portName, 9600);
 }
 
 
 void draw() {
-  tick();
+  if(firstContact)
+  {
+    tick();
+  }
+  
   background(127);
   
   /***********
@@ -95,7 +113,7 @@ void draw() {
   ***********/
   fill(255);
   text(connectionStatus, 20, 40);
-  text("x: " + _X + "\ny: " + _Y + "\n\nMaxX: " + maxX + "\nMinX: " + minX + "\n\nMaxY: " + maxY + "\nMinY: " + minY + "\nPeriodX: " + hzX + "\nPeriodY: " + hzY, 20, 100);
+  text("x: " + _X + "\ny: " + _Y + "\n\nMaxX: " + maxX + "\nMinX: " + minX + "\n\nMaxY: " + maxY + "\nMinY: " + minY + "\nPeriodX: " + hzX + "\nPeriodY: " + hzY + "\n\nMillis: " + millis(), 20, 100);
   
   /***********
   GRAPH 1
@@ -128,11 +146,33 @@ void draw() {
   endShape();
   
   //DRAW AVERAGE LINES
-  stroke(255,50);
-  line(graphX, graphY - (averageX/dataMax)*graphHeight,graphX+graphWidth,graphY - (averageX/dataMax)*graphHeight);
+  //DRAW X AXIS INSTANT AVERAGE
+  stroke(255,80);
+  beginShape();
+  curveVertex(graphX, graphY - ((Float)averageXData.get(0) / dataMax) * graphHeight);
+  for(int j=0;j<yData.size();j++)
+  {
+    float pX = graphX + ((float)j / graphDensity) * graphWidth;
+    float pY = graphY - ((Float)averageXData.get(j) / dataMax) * graphHeight;
+    curveVertex(pX,pY);
+  }
+  curveVertex(graphX+graphHeight, graphY - ((Float)averageXData.get(yData.size()-1) / dataMax) * graphHeight);
+  endShape();
+  //line(graphX, graphY - (averageX/dataMax)*graphHeight,graphX+graphWidth,graphY - (averageX/dataMax)*graphHeight);
   
-  stroke(0,50);
-  line(graphX, graphY - (averageY/dataMax)*graphHeight,graphX+graphWidth,graphY - (averageY/dataMax)*graphHeight);
+  //DRAW Y AXIS INSTANT AVERAGE
+  stroke(0,80);
+  beginShape();
+  curveVertex(graphX, graphY - ((Float)averageYData.get(0) / dataMax) * graphHeight);
+  for(int j=0;j<yData.size();j++)
+  {
+    float pX = graphX + ((float)j / graphDensity) * graphWidth;
+    float pY = graphY - ((Float)averageYData.get(j) / dataMax) * graphHeight;
+    curveVertex(pX,pY);
+  }
+  curveVertex(graphX+graphHeight, graphY - ((Float)averageYData.get(yData.size()-1) / dataMax) * graphHeight);
+  endShape();
+  //line(graphX, graphY - (averageY/dataMax)*graphHeight,graphX+graphWidth,graphY - (averageY/dataMax)*graphHeight);
   
   /***********
   GRAPH 2
@@ -149,9 +189,39 @@ void draw() {
 
   endShape();
   
-  stroke(0);
+  stroke(255);
   ellipse((graph2X + ((Float)xData.get(xData.size()-1) / dataMax) * graph2Width),(graph2Y - ((Float)yData.get(yData.size()-1) / dataMax) * graph2Height),10,10);
   
+
+  /************
+  GRAPH 3 - Period
+  *************/
+  //DRAW X AXIS
+  stroke(255); //x axis should be white
+  noFill(); //don't fill the graph curves
+  beginShape();
+  curveVertex(graph3X, graph3Y - ((Float)periodXData.get(0) / periodMax) * graph3Height); //first point on the curve (duplicated in for loop)
+  for(int i=0;i<periodXData.size();i++)
+  { 
+    float pX = graph3X + ((float)i / graphDensity) * graph3Width;
+    float pY = graph3Y - ((Float)periodXData.get(i) / periodMax) * graph3Height;
+    curveVertex(pX,pY);
+  }
+  curveVertex(graph3X+graph3Height, graph3Y - ((Float)periodXData.get(periodXData.size()-1) / periodMax) * graph3Height); //last point on the curve (duplicated in for loop)
+  endShape();
+  
+  //DRAW Y AXIS
+  stroke(0);
+  beginShape();
+  curveVertex(graph3X, graph3Y - ((Float)periodYData.get(0) / periodMax) * graph3Height);
+  for(int j=0;j<periodYData.size();j++)
+  {
+    float pX = graph3X + ((float)j / graphDensity) * graph3Width;
+    float pY = graph3Y - ((Float)periodYData.get(j) / periodMax) * graph3Height;
+    curveVertex(pX,pY);
+  }
+  curveVertex(graph3X+graph3Height, graph3Y - ((Float)periodYData.get(periodYData.size()-1) / periodMax) * graph3Height);
+  endShape();
 }
 
 void tick(){
@@ -168,7 +238,7 @@ void tick(){
   int peakCount = 0;
 
   //data window to look at
-  int windowSize = 200;
+  int windowSize = 30;
 
   if(firstContact == true) //has first contact occured
   {
@@ -179,8 +249,7 @@ void tick(){
     }
     
     averageX = averageSum / (float)averageDistance;
-    averageXData.remove(0);
-    averageXData.add(averageX);
+    
     
     //Calculate and draw y axis average
     averageSum = 0;
@@ -191,88 +260,93 @@ void tick(){
     }
     
     averageY = averageSum / (float)averageDistance;
-    averageYData.remove(0);
-    averageYData.add(averageX);
-    
-/*
+        
+
     //Calculate the current frequency X
+   
+    //get the seconds represented by the window
+    int timeScale = ((Integer)timeCodeData.get(timeCodeData.size() - 1) - (Integer)timeCodeData.get(timeCodeData.size() - 1 - windowSize))/1000;
     float lastDataX = (Float)xData.get(xData.size()-1);
-    int lastRealChangePoint = 1;
-    int lastRealChangeState = 0;
-    int changePoint = 0;
-    int changeState = 0;
+    
+    int switchesX = 0;
+    int switchesY = 0;
+
+    //Saying peaks and valleys is actually a misnomer.  Just using it to hold two points.
+    float lastPeakX = 5000;
+
+    int lastState = 1;
+    int thisState = 1;
+
+    int switchesPerStepX = 0;
+
+    float sizeReduction = 30;
 
     for(int i = 1;i<windowSize;i++)
-    {
-      float diff = (Float)xData.get(xData.size() - 1 - i) - lastDataX; //the difference between this point and the last
+    { 
+      float p1 = (Float)xData.get(xData.size() - 1 - i);
+      float p2 = lastDataX;
+      lastDataX = (Float)xData.get(xData.size() - 1 - i);
 
-      if(diff < 0)
+      if(p1 < p2)
       {
-        if(lastChangeState > 0)
-        {
-          changePoint = i;
-        }
-        else
-        {
-
-        }
-      }
-      else
-      {
-        if(lastChangeState < 0)
-        {
-
-        }
-        else
-        {
-
-        }
-      }
-    }*/
-    /*
-     if(abs(lastDataX - (Float)xData.get(xData.size()-1)) > noiseReducer)
-    {
-      if((Float)xData.get(xData.size()-1)-averageX <= 0)
-      {
-        currentSettingX = -1;
+        thisState = 1;
       }
       else 
       {
-        currentSettingX = 1;
+        thisState = -1;
       }
-    }
-    
-    if(abs(lastDataY - (Float)yData.get(yData.size()-1)) > noiseReducer)
-    {
-      if((Float)yData.get(yData.size()-1)-averageY <= 0)
+
+      if(thisState != lastState)
       {
-        currentSettingY = -1;
+        if(verifyStateChange(p1,i,thisState))
+        {
+          if(abs(p1 - lastPeakX) >= sizeReduction)
+          {
+            switchesX++;
+          }
+          else
+          {
+            println("negating switch, too small a change");
+          }
+          lastState = thisState;
+          lastPeakX = p1;
+        }
       }
-      else 
-      {
-        currentSettingY = 1;
-      }
     }
-    
-    if(currentSettingX != lastSettingX)
-    {
-      lastPeriodX = millis() - timeFromSwitchX;
-      timeFromSwitchX = millis();
-      lastSettingX = currentSettingY;
-      
-      hzX = 1000 / lastPeriodX;
+    if(timeScale!=0)
+    { 
+      hzX = (float)((float)switchesX / (float)timeScale)/2.0;
     }
-    
-    if(currentSettingY != lastSettingY)
-    {
-      lastPeriodY = millis() - timeFromSwitchY;
-      timeFromSwitchY = millis();
-      lastSettingY = currentSettingY;
-      
-      hzY = 1000 / lastPeriodY;
-    }
-    */
   }
+}
+
+//verifyStateChange(p1,i,thisState);
+boolean verifyStateChange(Float p1,int i,int goalState)
+{
+  int thisState = 0;
+  int verifyRange = 1;
+
+  for(int offset = 1;offset<verifyRange;offset++)
+  {
+    float p3 = (Float)xData.get(xData.size() - 1 - i - offset);
+
+    if(p1 < p3)
+    {
+      thisState = 1;
+    }
+    else 
+    {
+      thisState = -1;
+    }
+
+    if(thisState != goalState)
+    {
+      println("thisState != goalState in verifyStateChange");
+      return false;
+    }
+  }
+
+  return true;
 }
 
 void serialEvent(Serial myPort) {
@@ -294,6 +368,11 @@ void serialEvent(Serial myPort) {
   if (firstContact == false) {
     println("firstContact");
     if (inByte == 'A') { 
+      //fill the timecode with the data collection start time
+      for(int counter=0;counter < graphDensity; counter++)
+      {
+        timeCodeData.add(millis());
+      }
       myPort.clear();          // clear the serial port buffer
       firstContact = true;     // you've had first contact from the microcontroller
       myPort.write('A');       // ask for more
@@ -356,7 +435,16 @@ void serialEvent(Serial myPort) {
       xData.add(weightedAverageX);
       yData.remove(0);
       yData.add(weightedAverageY);
-      
+      averageXData.remove(0);
+      averageXData.add(averageX);
+      averageYData.remove(0);
+      averageYData.add(averageY);
+      timeCodeData.remove(0);
+      timeCodeData.add(millis()); 
+      periodXData.remove(0);
+      periodXData.add(hzX);
+      periodYData.remove(0);
+      periodYData.add(hzY);
       
       if(_X > maxX)
       {
