@@ -32,7 +32,7 @@ void loop() {
     Xbee.print(pulseY);
     
   }
-  delay(50);
+  delay(100);
 }
 
 void establishContact() {

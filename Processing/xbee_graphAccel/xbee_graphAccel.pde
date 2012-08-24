@@ -1,10 +1,16 @@
 import processing.serial.*;
-import ddf.minim.*;
+import processing.net.*;
 
+//Data for setting up the Arduino Serial Connection
 Serial myPort;                       // The serial port
 int[] serialInArray = new int[8];    // Where we'll put what we receive
 int serialCount = 0;                 // A count of how many bytes we receive
 boolean firstContact = false;        // Whether we've heard from the microcontroller
+
+//Data for Setting Up the Flash Socket Server
+int sport = 9002;
+Server myServer;
+byte zero = 0;
 
 String s_X = "0";
 String s_Y = "0";
@@ -95,8 +101,11 @@ void setup() {
   // Print a list of the serial ports, for debugging purposes:
   println(Serial.list());
   
-  String portName = Serial.list()[2];
+  String portName = Serial.list()[3];
   myPort = new Serial(this, portName, 9600);
+
+  //Settup the socket server
+  myServer = new Server(this,sport);
 }
 
 
@@ -104,6 +113,7 @@ void draw() {
   if(firstContact)
   {
     tick();
+    exportData();
   }
   
   background(127);
@@ -180,7 +190,7 @@ void draw() {
   stroke(0, 100);
   beginShape();
 
-  for(int j=0;j<yData.size();j++)
+  for(int j=0;j<yData.size()-1;j++)
   {
     float pX = graph2X + ((Float)xData.get(j) / dataMax) * graph2Width;
     float pY = graph2Y - ((Float)yData.get(j) / dataMax) * graph2Height;
@@ -306,7 +316,7 @@ void tick(){
           }
           else
           {
-            println("negating switch, too small a change");
+            //println("negating switch, too small a change");
           }
           lastState = thisState;
           lastPeakX = p1;
@@ -471,6 +481,16 @@ void serialEvent(Serial myPort) {
     }
     myPort.write('A');
   }
+}
+
+void exportData()
+{
+  //((Float)periodXData.get(periodXData.size()-1)
+    //converting the number to an int 1000x as big.
+    Float rockData = ((Float)periodXData.get(periodXData.size()-1)) * 1000;
+    int rockInt = int(rockData);
+    println(rockInt);
+    myServer.write(rockInt+"\0");
 }
 
 void stop()
