@@ -33,10 +33,8 @@ class PlayerSerial extends Serial
 	}
 }
 
-//Data for Setting Up the Flash Socket Server
-int sport = 9002;
-Server myServer;
-byte zero = 0;
+//Server for talking with Flash
+DataServer server;
 
 //----------------------------------------
 //  FSM for jump detection
@@ -503,8 +501,8 @@ void setup()
 		playerStates[player].setup();
 	}
 
-	//Settup the socket server
-	myServer = new Server(this,sport);
+	//Setup the socket server
+	server = new DataServer(this);
 }
 
 int activePlayer = 0;
