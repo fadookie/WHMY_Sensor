@@ -15,7 +15,7 @@ class DataServer {
     if (inAir) {
       playerStates |= bitmask;
     } else {
-      playerStates &= bitmask;
+      playerStates &= ~bitmask;
     }
     exportData();
   }
