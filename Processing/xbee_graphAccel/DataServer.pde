@@ -10,6 +10,7 @@ class DataServer {
   }
   
   void update(int player, boolean inAir) {
+		println("player " +player+ " in air =" +inAir);
     int bitmask = 1 << player;
     if (inAir) {
       playerStates |= bitmask;
@@ -21,7 +22,7 @@ class DataServer {
 
   private void exportData()
   {
-      println(padLeft(Integer.toBinaryString(playerStates), 4) );
+      //println(padLeft(Integer.toBinaryString(playerStates), 4) );
       myServer.write(playerStates+"\0");
   }
   

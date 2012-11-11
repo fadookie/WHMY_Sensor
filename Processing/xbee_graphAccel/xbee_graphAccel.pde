@@ -111,6 +111,7 @@ class PlayerState
 	int bytesPerSample = 12;	// This must match the Arduino code
 	byte[] serialInArray = new byte[bytesPerSample];    // Where we'll put what we receive
 	int serialCount = 0;                 // A count of how many bytes we receive
+	int playerNumber = 0;
 
 	boolean firstContact = false;        // Whether we've heard from the microcontroller
 	JumpDetector jumpDet = new JumpDetector();
@@ -151,6 +152,10 @@ class PlayerState
 
 	float hzX = 0.0;
 	float hzY = 0.0;
+
+	PlayerState( int _playerNumber ) {
+		playerNumber = _playerNumber;
+	}
 
 	void setup()
 	{
@@ -342,6 +347,7 @@ class PlayerState
 	private void sendEvent( String event )
 	{
 		// TODO send even to flash here
+		server.update( playerNumber, jumpDet.isInAir() );
 	}
 
 	void serialEvent( Serial myPort )
@@ -495,10 +501,10 @@ void setup()
 	//playerSerials[2] = new PlayerSerial( this, Serial.list()[0], 9600, 2 );
 	//playerSerials[3] = new PlayerSerial( this, Serial.list()[0], 9600, 3 );
 
-	for( int player = 0; player < NumPlayers; player++ )
+	for( int playerNum = 0; playerNum < NumPlayers; playerNum++ )
 	{
-		playerStates[player] = new PlayerState();
-		playerStates[player].setup();
+		playerStates[playerNum] = new PlayerState(playerNum);
+		playerStates[playerNum].setup();
 	}
 
 	//Setup the socket server
