@@ -38,10 +38,10 @@ void loop() {
   pulseX = pulseIn(xIn,HIGH);  // Read X pulse  
   pulseY = pulseIn(yIn,HIGH);  // Read Y pulse
   
-  if(Serial.available() > 0)
-  {
+//  if(Serial.available() > 0)
+//  {
     // get incoming byte:
-    inByte = Serial.read();
+//    inByte = Serial.read();
     
 //    Serial.print( pulseX );
 //    Serial.print( pulseY );
@@ -62,13 +62,9 @@ void loop() {
     Serial.print(data);
     lastTimeMs = nowMs;
     
-  }
+ // }
 //  delay(10);
 }
 
 void establishContact() {
-  while (Serial.available() <= 0) {
-    Serial.print('A');   // send a capital A
-    delay(500);
-  }
 }
