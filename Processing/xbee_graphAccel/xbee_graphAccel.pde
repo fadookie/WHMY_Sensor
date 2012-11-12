@@ -256,7 +256,7 @@ class PlayerState
 			Text display
 		 ***********/
 		fill(255);
-		text("\nPlayer "+activePlayer, 20, 50 );
+		text("\nPlayer "+(activePlayer+1), 20, 50 );
 		text("\nMaxX: " + maxX + "\nMinX: " + minX + "\n\nMaxY: " + maxY + "\nMinY: " + minY + "\nPeriodX: " + hzX + "\nPeriodY: " + hzY + "\n\nMillis: " + millis(), 20, 100);
 
 		//----------------------------------------
@@ -501,11 +501,20 @@ void setup()
 	// Print a list of the serial ports, for debugging purposes:
 	println( Serial.list() );
 
-	playerSerials[0] = new PlayerSerial( this, Serial.list()[0], 9600, 0 );
-	playerSerials[1] = new PlayerSerial( this, Serial.list()[2], 9600, 1 );
-	playerSerials[2] = new PlayerSerial( this, Serial.list()[4], 9600, 2 );
-	//playerSerials[3] = new PlayerSerial( this, Serial.list()[3], 9600, 3 );
-
+        // PORT MAP
+        int[] player2port = { 0, 2, 4, 6 };
+        
+        for( int p = 0; p < NumPlayers; p++ ) {
+          int port = player2port[p];
+          if( port < Serial.list().length ) {
+            playerSerials[p] = new PlayerSerial( this, Serial.list()[port], 9600, p );
+            playerSerials[p].clear();
+          }
+          else {
+            println("WARNING: player "+(p+1)+" NOT hooked - its mapped port ("+port+") does not exist.");
+          }
+        }
+        
 	//Setup the socket server
 	server = new DataServer(this);
 }
@@ -557,6 +566,11 @@ void keyPressed()
     else if( key == 'p' ) {
       println("TOGGLE PAUSING");
       pauseSerialInput = !pauseSerialInput;
+      if(!pauseSerialInput)
+      {
+        for( int p = 0; p < playerSerials.length; p++ )
+          playerSerials[p].clear();
+      }
     }
 	}
 }
