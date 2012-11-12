@@ -118,7 +118,6 @@ class PlayerState
 	boolean firstContact = false;        // Whether we've heard from the microcontroller
 	JumpDetector jumpDet = new JumpDetector();
 
-	String connectionStatus = "Not Connected";
 	int maxX = 0;
 	int maxY = 0;
 	int minX = 10000;
@@ -234,7 +233,7 @@ class PlayerState
 		// label
 		textFont(f);
 		fill(255);
-		text(label, posX+5, posY+height/2);
+		text(label, posX+5, posY+20);
 
 		// plot mouse stuff
 		if( mouseY > posY && mouseY < (posY+height) )
@@ -257,7 +256,7 @@ class PlayerState
 			Text display
 		 ***********/
 		fill(255);
-		text(connectionStatus, 20, 40);
+		text("\nPlayer "+activePlayer, 20, 50 );
 		text("\nMaxX: " + maxX + "\nMinX: " + minX + "\n\nMaxY: " + maxY + "\nMinY: " + minY + "\nPeriodX: " + hzX + "\nPeriodY: " + hzY + "\n\nMillis: " + millis(), 20, 100);
 
 		//----------------------------------------
@@ -504,7 +503,7 @@ void setup()
 
 	playerSerials[0] = new PlayerSerial( this, Serial.list()[0], 9600, 0 );
 	playerSerials[1] = new PlayerSerial( this, Serial.list()[2], 9600, 1 );
-	//playerSerials[2] = new PlayerSerial( this, Serial.list()[2], 9600, 2 );
+	playerSerials[2] = new PlayerSerial( this, Serial.list()[4], 9600, 2 );
 	//playerSerials[3] = new PlayerSerial( this, Serial.list()[3], 9600, 3 );
 
 	//Setup the socket server
@@ -537,6 +536,7 @@ void serialEvent(Serial myPort)
   catch( Exception e)
   {
     new Exception().printStackTrace();
+    println(e.getMessage());
   }
 }
 
