@@ -18,6 +18,18 @@ void setup() {
   lastTimeMs = millis();
 }
 
+void serialPrint4Digit(long x)
+{
+    if( x >= 10000 )
+      x = 9999;
+    String data = "";
+    if( x < 1000 ) data += "0";
+    if( x < 100 ) data += "0";
+    if( x < 10 ) data += "0";
+    data += x;
+    Serial.print(data);
+}
+
 void loop() {
   // variables to read the pulse widths:
   int pulseX, pulseY;
@@ -31,21 +43,27 @@ void loop() {
     // get incoming byte:
     inByte = Serial.read();
     
-    Serial.print(pulseX);
-    Serial.print(pulseY);
-    
-    //Serial.print(millis());
-    
-    unsigned long ms = millis() % 10000;
+//    Serial.print( pulseX );
+//    Serial.print( pulseY );
+
+    Serial.print('s');  // indicate start of sample
+
+    serialPrint4Digit(pulseX);
+    serialPrint4Digit(pulseY);
+
+    // Not sure why we can't use serialPrint4Digit here - meh!
+    unsigned long nowMs = millis();
+    unsigned long deltaMs = (nowMs-lastTimeMs) % 10000;
     String data = "";
-    if( ms < 1000 ) data += "0";
-    if( ms < 100 ) data += "0";
-    if( ms < 10 ) data += "0";
-    data += ms;
+    if( deltaMs < 1000 ) data += "0";
+    if( deltaMs < 100 ) data += "0";
+    if( deltaMs < 10 ) data += "0";
+    data += deltaMs;
     Serial.print(data);
+    lastTimeMs = nowMs;
     
   }
-  delay(10);
+//  delay(10);
 }
 
 void establishContact() {

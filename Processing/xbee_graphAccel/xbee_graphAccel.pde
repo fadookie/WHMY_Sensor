@@ -30,6 +30,7 @@ class PlayerSerial extends Serial
 	{
 		super( applet, name, baud );
 		playerNumber = _playerNumber;
+    this.write('A');
 	}
 }
 
@@ -112,6 +113,7 @@ class PlayerState
 	byte[] serialInArray = new byte[bytesPerSample];    // Where we'll put what we receive
 	int serialCount = 0;                 // A count of how many bytes we receive
 	int playerNumber = 0;
+  boolean isReceivingSample = false;
 
 	boolean firstContact = false;        // Whether we've heard from the microcontroller
 	JumpDetector jumpDet = new JumpDetector();
@@ -187,6 +189,7 @@ class PlayerState
 			rawYs.add(5000);
 
 			inAirSignal.add(0);
+      deltaTimeData.add(10);
 		}
 	}
 
@@ -352,6 +355,8 @@ class PlayerState
 
 	void serialEvent( Serial myPort )
 	{
+    assert( myPort != null );
+
 		//data for smoothing
 		float weightedAverageX = 0.0;
 		float weightedAverageY = 0.0;
@@ -363,33 +368,28 @@ class PlayerState
 
 		// read a byte from the serial port:
 		byte inByte = (byte)myPort.read();
-		// if this is the first byte received, and it's an A,
-		// clear the serial buffer and note that you've
-		// had first contact from the microcontroller. 
-		// Otherwise, add the incoming byte to the array:
-		if (firstContact == false) {
-			println("firstContact");
-			if (inByte == 'A') { 
-				//fill the timecode with the data collection start time
-				for(int counter=0;counter < graphDensity; counter++)
-				{
-					deltaTimeData.add(10);
-				}
-				myPort.clear();          // clear the serial port buffer
-				firstContact = true;     // you've had first contact from the microcontroller
-				myPort.write('A');       // ask for more
-				connectionStatus = "connected";
-			} 
-		} 
-		else {
+
+    if( verbose )
+      println("serial read "+(char)inByte);
+
+    if( !isReceivingSample )
+    {
+      if( (char)inByte == 's')
+        isReceivingSample = true;
+      // always send something to indicate we're ready to read more data
+			myPort.write('A');
+    }
+    else
+    {
 			serialInArray[serialCount] = inByte;
 			//println(serialCount + ": " + inByte);
 			serialCount++;
 
-			// If we have 12 bytes:
+      // If we just got our last sample, process it
 			if (serialCount >= 12)
 			{
 				serialCount = 0;
+        isReceivingSample = false;
 
 				String s_X = "";
 				s_X += (char)serialInArray[0];
@@ -480,7 +480,6 @@ class PlayerState
 				if(_Y < minY)
 					minY = _Y;
 			}
-			myPort.write('A');
 		}
 	}
 }
@@ -493,25 +492,29 @@ void setup()
 {
 	size(screenWidth, screenHeight);  // Stage size
 
-	// Print a list of the serial ports, for debugging purposes:
-	println( Serial.list() );
-
-	playerSerials[0] = new PlayerSerial( this, Serial.list()[0], 9600, 0 );
-	//playerSerials[1] = new PlayerSerial( this, Serial.list()[0], 9600, 1 );
-	//playerSerials[2] = new PlayerSerial( this, Serial.list()[0], 9600, 2 );
-	//playerSerials[3] = new PlayerSerial( this, Serial.list()[0], 9600, 3 );
-
+  // Create states BEFORE hooking up serial ports..
 	for( int playerNum = 0; playerNum < NumPlayers; playerNum++ )
 	{
 		playerStates[playerNum] = new PlayerState(playerNum);
 		playerStates[playerNum].setup();
 	}
 
+	// Print a list of the serial ports, for debugging purposes:
+	println( Serial.list() );
+
+	playerSerials[0] = new PlayerSerial( this, Serial.list()[0], 9600, 0 );
+	playerSerials[1] = new PlayerSerial( this, Serial.list()[2], 9600, 1 );
+	//playerSerials[2] = new PlayerSerial( this, Serial.list()[2], 9600, 2 );
+	//playerSerials[3] = new PlayerSerial( this, Serial.list()[3], 9600, 3 );
+
 	//Setup the socket server
 	server = new DataServer(this);
 }
 
 int activePlayer = 0;
+boolean verbose = false;
+boolean pauseSerialInput = false;
+
 void draw()
 {
 	playerStates[ activePlayer ].draw();
@@ -519,8 +522,22 @@ void draw()
 
 void serialEvent(Serial myPort)
 {
-	PlayerSerial playerPort = (PlayerSerial)myPort;
-	playerStates[ playerPort.playerNumber ].serialEvent( myPort );
+  try
+  {
+    if( !pauseSerialInput )
+    {
+      assert( myPort != null ) :"null port";
+      PlayerSerial playerPort = (PlayerSerial)myPort;
+      assert( playerPort != null ):"null playerport";
+      assert(playerPort.playerNumber < playerStates.length):"bad player number "+playerPort.playerNumber;
+      assert(playerStates[playerPort.playerNumber] != null):"player state not inited "+playerPort.playerNumber;
+      playerStates[ playerPort.playerNumber ].serialEvent( myPort );
+    }
+  }
+  catch( Exception e)
+  {
+    new Exception().printStackTrace();
+  }
 }
 
 void keyPressed()
@@ -535,6 +552,12 @@ void keyPressed()
 			activePlayer = 2;
 		else if( key == '4' )
 			activePlayer = 3;
+    else if( key == 'v' )
+      verbose = !verbose;
+    else if( key == 'p' ) {
+      println("TOGGLE PAUSING");
+      pauseSerialInput = !pauseSerialInput;
+    }
 	}
 }
 

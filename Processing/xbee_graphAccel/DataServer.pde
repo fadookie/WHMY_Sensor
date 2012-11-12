@@ -10,7 +10,7 @@ class DataServer {
   }
   
   void update(int player, boolean inAir) {
-		println("player " +player+ " in air =" +inAir);
+		//println("player " +player+ " in air =" +inAir);
     int bitmask = 1 << player;
     if (inAir) {
       playerStates |= bitmask;
